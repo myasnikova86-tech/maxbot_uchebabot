@@ -32,7 +32,7 @@ async def start_message(event: MessageCreated):
 @dp.message_created(Command('id'))
 async def hello(event: MessageCreated):
     await event.message.answer(f'''Привет, {event.from_user.first_name}!
-Твой ID в мессенджере: {event.from_user.user_id}
+Твой ID в мессенджере: {event.from_user.user_id}''')
 
 @dp.message_created(Command('test'))
 async def test_message(event: MessageCreated):
