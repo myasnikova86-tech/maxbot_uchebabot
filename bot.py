@@ -27,7 +27,7 @@ async def bot_started(event: BotStarted):
     kb.row(MessageButton(text='Иностранный язык'))
     await event.bot.send_message(
         chat_id=event.chat_id,
-        text='Выбери дисциплину',
+        text='👋 Привет! Ты что-то пропустил? Выбери дисциплину:',
         attachments=[kb.as_markup()]
     )
 
