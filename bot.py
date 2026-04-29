@@ -27,7 +27,7 @@ async def bot_started(event: BotStarted):
 
 @dp.message_created(Command('start'))
 async def start_message(event: MessageCreated):
-    await event.message.answer(f "Обработка команды start")
+    await event.message.answer(f"Обработка команды start")
 
 @dp.message_created(Command('id'))
 async def hello(event: MessageCreated):
