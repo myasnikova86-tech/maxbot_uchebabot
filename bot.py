@@ -20,9 +20,11 @@ dp = Dispatcher()
 
 @dp.bot_started()
 async def bot_started(event: BotStarted):
-    # Создаём клавиатуру с двумя кнопками
+    # Создаём клавиатуру
     kb = InlineKeyboardBuilder()
-    kb.row(MessageButton(text='Информатика'), MessageButton(text='Иностранный язык'))
+    # Каждая кнопка добавляется в свой отдельный ряд
+    kb.row(MessageButton(text='Информатика'))
+    kb.row(MessageButton(text='Иностранный язык'))
     await event.bot.send_message(
         chat_id=event.chat_id,
         text='Выбери дисциплину',
