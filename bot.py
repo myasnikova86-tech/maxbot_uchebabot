@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 from maxapi import Bot, Dispatcher
-from maxapi.types import MessageCreated, Command, BotStarted, CallbackQuery
+from maxapi.types import MessageCreated, Command, BotStarted
 from maxapi.types import CallbackButton, ButtonsPayload, Attachment
 from maxapi.enums.intent import Intent
 
