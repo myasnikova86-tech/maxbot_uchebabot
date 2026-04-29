@@ -21,13 +21,18 @@ dp = Dispatcher()
 @dp.bot_started()
 async def bot_started(event: BotStarted):
     await event.bot.send_message(
-chat_id=event.chat_id,
-text='Ты начал диалог с ботом'
-)
+        chat_id=event.chat_id,
+        text='Ты начал диалог с ботом'
+    )
 
 @dp.message_created(Command('start'))
 async def start_message(event: MessageCreated):
     await event.message.answer(f "Обработка команды start")
+
+@dp.message_created(Command('id'))
+async def hello(event: MessageCreated):
+    await event.message.answer(f'''Привет, {event.from_user.first_name}!
+Твой ID в мессенджере: {event.from_user.user_id}
 
 @dp.message_created(Command('test'))
 async def test_message(event: MessageCreated):
