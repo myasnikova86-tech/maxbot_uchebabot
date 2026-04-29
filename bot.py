@@ -20,9 +20,13 @@ dp = Dispatcher()
 
 @dp.bot_started()
 async def bot_started(event: BotStarted):
+    # Создаём клавиатуру с двумя кнопками
+    kb = InlineKeyboardBuilder()
+    kb.row(MessageButton(text='Информатика'), MessageButton(text='Иностранный язык'))
     await event.bot.send_message(
         chat_id=event.chat_id,
-        text='Ты начал диалог с ботом'
+        text='Выбери дисциплину',
+        attachments=[kb.as_markup()]
     )
 
 @dp.message_created(Command('start'))
