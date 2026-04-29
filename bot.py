@@ -38,7 +38,7 @@ async def hello(event: MessageCreated):
 async def test_message(event: MessageCreated):
     reply_kb = InlineKeyboardBuilder()
     reply_kb.row(MessageButton(text='Да'), MessageButton(text='Нет'))
-    await bot.send_message(chat_id=event.from_chat.chat_id, text='Текстовое сообщение с кнопками',
+    await bot.send_message(user_id=event.from_user.user_id, text='Текстовое сообщение с кнопками',
                        attachments=[reply_kb.as_markup()])
 
 @dp.message_created(F.message.body.text)
