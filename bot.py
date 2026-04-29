@@ -43,7 +43,7 @@ async def test_message(event: MessageCreated):
 
 @dp.message_created(F.message.body.text)
 async def text_handler(event: MessageCreated):
-    await bot.send_mesage(user_id=event.from_user.user_id, text = f'Вы выбрали "{event.message.body.text}"')
+    await bot.send_message(user_id=event.from_user.user_id, text = f'Вы выбрали "{event.message.body.text}"')
     
 async def main():
    await bot.delete_webhook()
