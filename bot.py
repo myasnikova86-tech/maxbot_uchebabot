@@ -18,16 +18,17 @@ dp = Dispatcher()
 
 @dp.bot_started()
 async def bot_started(event: BotStarted):
-await event.bot.send_message(
+    await event.bot.send_message(
 chat_id=event.chat_id,
 text='Ты начал диалог с ботом'
 )
 
 @dp.message_created(Command('start'))
 async def start_message(event: MessageCreated):
-await event.message.answer(f"Обработка команды start")
+    await event.message.answer(f"Обработка команды start")
 
 async def main():
+   await bot.delete_webhook()
    await dp.start_polling(bot)
 
 if __name__ == '__main__':
