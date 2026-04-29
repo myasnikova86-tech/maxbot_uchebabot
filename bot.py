@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import random
 from maxapi import Bot, Dispatcher, F
 from maxapi.types import MessageButton, MessageCreated, Command, BotStarted
 from maxapi.types import ButtonsPayload, Attachment
@@ -61,20 +62,19 @@ async def handle_all_text(event: MessageCreated):
     
     # Если нажата кнопка "Информатика"
     if text == "Информатика":
-        # Отправляем новое сообщение с тремя кнопками
         await bot.send_message(
             user_id=event.from_user.user_id,
             text="Выбери нужную кнопку:",
             attachments=[get_info_keyboard()]
         )
-    # Если нажата одна из новых кнопок (Информатика)
     elif text in ("Я пропустил лекцию :(", "Сдать ДЗ", "Какой у меня вариант?"):
         if text == "Я пропустил лекцию :(":
             response = "Обратись к одногруппникам за конспектом 😢"
         elif text == "Сдать ДЗ":
             response = "Загрузи задание в раздел 'Домашнее задание' в личном кабинете."
         else:  # "Какой у меня вариант?"
-            response = "Твой вариант указан в файле 'Варианты' в общем чате."
+            variant_number = random.randint(1, 10)
+            response = f"Ваш вариант: {variant_number}"
         await bot.send_message(user_id=event.from_user.user_id, text=response)
     # Обработка кнопок "Да"/"Нет" из /test и любых других текстов
     else:
