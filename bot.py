@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 from maxapi import Bot, Dispatcher, F
-from maxapi.types import MessageCreated, Command, BotStarted
+from maxapi.types import MessageButton, MessageCreated, Command, BotStarted
 from maxapi.types import ButtonsPayload, Attachment
 from maxapi.types import LinkButton, MessageCallback, CallbackButton
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
@@ -21,8 +21,8 @@ dp = Dispatcher()
 @dp.bot_started()
 async def bot_started(event: BotStarted):
     await event.bot.send_message(
-chat_id=event.chat_id,
-text='Ты начал диалог с ботом'
+        chat_id=event.chat_id,
+        text='Ты начал диалог с ботом'
 )
 
 @dp.message_created(Command('start'))
@@ -31,12 +31,15 @@ async def start_message(event: MessageCreated):
 
 @dp.message_created(Command('test'))
 async def test_message(event: MessageCreated):
-reply_kb = InlineKeyboardBuilder()
-reply_kb.row(MessageButton(text='Да'),
-MessageButton(text='Нет'))
-await bot.send_message(user_id=event.from_user.user_id, text='Текстовое сообщение с кнопками',
-attachments=[reply_kb.as_markup()])
+    reply_kb = InlineKeyboardBuilder()
+    reply_kb.row(MessageButton(text='Да'), MessageButton(text='Нет'))
+    await bot.send_message(chat_id=event.from_chat.chat_id, text='Текстовое сообщение с кнопками',
+                       attachments=[reply_kb.as_markup()])
 
+@dp.message_created(F.message.body.text)
+async def text_handler(event: MessageCreated):
+    await bot.send_message(user_id=event.from_chat.chat_id, text = f'Вы выбрали "{event.message.body.text}" ' 
+    )
 async def main():
    await bot.delete_webhook()
    await dp.start_polling(bot)
