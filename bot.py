@@ -1,9 +1,11 @@
 import asyncio
 import logging
 import os
-from maxapi import Bot, Dispatcher
+from maxapi import Bot, Dispatcher, F
 from maxapi.types import MessageCreated, Command, BotStarted
-from maxapi.types import CallbackButton, ButtonsPayload, Attachment
+from maxapi.types import ButtonsPayload, Attachment
+from maxapi.types import LinkButton, MessageCallback, CallbackButton
+from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 from maxapi.enums.intent import Intent
 
 logging.basicConfig(level=logging.INFO)
@@ -26,6 +28,14 @@ text='Ты начал диалог с ботом'
 @dp.message_created(Command('start'))
 async def start_message(event: MessageCreated):
     await event.message.answer(f"Обработка команды start")
+
+@dp.message_created(Command('test'))
+async def test_message(event: MessageCreated):
+reply_kb = InlineKeyboardBuilder()
+reply_kb.row(MessageButton(text='Да'),
+MessageButton(text='Нет'))
+await bot.send_message(user_id=event.from_user.user_id, text='Текстовое сообщение с кнопками',
+attachments=[reply_kb.as_markup()])
 
 async def main():
    await bot.delete_webhook()
