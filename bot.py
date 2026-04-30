@@ -20,9 +20,16 @@ dp = Dispatcher()
 # Множество для хранения уникальных ID пользователей
 unique_users = set()
 
-# ID администратора (замени на свой после того, как узнаешь его через /id)
-# Узнать свой ID: отправь боту команду /id и посмотри в ответе (в логах или в чате)
-ADMIN_ID = 49912381  # 👈 ЗДЕСЬ УКАЖИ СВОЙ ID (число)
+ADMIN_ID = os.environ.get('ADMIN_ID')
+if not ADMIN_ID:
+    logging.critical("Переменная окружения ADMIN_ID не задана!")
+    exit(1)
+try:
+    ADMIN_ID = int(ADMIN_ID)
+except ValueError:
+    logging.critical("ADMIN_ID должен быть числом!")
+    exit(1)
+
 
 # ======================== ФУНКЦИИ КЛАВИАТУР ========================
 def get_info_keyboard():
