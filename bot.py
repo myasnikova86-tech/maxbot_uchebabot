@@ -9,9 +9,9 @@ from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
 # ======================== НАСТРОЙКА ========================
 logging.basicConfig(level=logging.INFO)
 
-TOKEN = os.environ.get('TOKEN')
+TOKEN = os.environ.get('BOT_TOKEN')
 if not TOKEN:
-    logging.critical("Переменная окружения TOKEN не задана!")
+    logging.critical("Переменная окружения BOT_TOKEN не задана!")
     exit(1)
 
 bot = Bot(TOKEN)
