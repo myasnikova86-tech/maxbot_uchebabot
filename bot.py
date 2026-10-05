@@ -30,10 +30,12 @@ except ValueError:
     logging.critical("ADMIN_ID должен быть числом!")
     exit(1)
 
-# === НОВОЕ ===
 # Словарь: кто сейчас пишет вопрос учителю
-# {user_id: True/False}
 user_waiting_question = {}
+
+# === НОВОЕ ===
+# Словарь: кто сейчас сдаёт домашнее задание
+user_waiting_homework = {}
 
 
 # ======================== ФУНКЦИИ КЛАВИАТУР ========================
@@ -42,7 +44,7 @@ def get_info_keyboard():
     kb.row(MessageButton(text='Я пропустил лекцию :('))
     kb.row(MessageButton(text='Сдать ДЗ'))
     kb.row(MessageButton(text='Какой у меня вариант?'))
-    kb.row(MessageButton(text='✉️ Задать вопрос учителю'))  # === НОВОЕ ===
+    kb.row(MessageButton(text='✉️ Задать вопрос учителю'))
     return kb.as_markup()
 
 def get_topics_keyboard():
@@ -64,7 +66,7 @@ TOPICS_MESSAGES = {
     "Тема 2. Алгебра логики": "Тема 2. Алгебра логики. Задание: Напиши конспект Лекции в тетрадь, выполни все задания лекции. Тетрадь с Лекцией и выполненными заданиями сдай учителю. И не забудь про ДЗ! Ссылка на материалы: https://disk.yandex.ru/d/BPjzUvFeiSOvVw",
     "Тема 3. Интернет": "Тема 3. Интернет. Задание: Напиши конспект Лекции в тетрадь, выполни все задания лекции. Тетрадь с Лекцией и выполненными заданиями сдай учителю. И не забудь про ДЗ! Ссылка на материалы: https://disk.yandex.ru/d/w_85PUK6rneizQ",
     "Тема 4. Защита информации": "Тема 4. Защита информации. Задание: Напиши конспект Лекции в тетрадь, выполни все задания лекции. Тетрадь с Лекцией и выполненными заданиями сдай учителю. И не забудь про ДЗ! Ссылка на материалы: https://disk.yandex.ru/d/JycaZ67-mUxadQ",
-    "Тема 5. Текстовый процессор": "Тема 5. Текстовый процессор. Задание: Напиши конспект Лекции в тетрадь, выполни все задания лекции. Тетрадь с Лекцией и выполненными заданиями сдай учителю. ДОМАШНЕЕ ЗАДАНИЕ: Из учебника Михеевой Е.В. "Практикум" выполнить стр.31 ПР№9,10  Ссылка на материалы: https://disk.yandex.ru/d/aiykc237nTqJBg",
+    "Тема 5. Текстовый процессор": "Тема 5. Текстовый процессор. Задание: Напиши конспект Лекции в тетрадь, выполни все задания лекции. Тетрадь с Лекцией и выполненными заданиями сдай учителю. И не забудь про ДЗ! Ссылка на материалы: https://disk.yandex.ru/d/aiykc237nTqJBg",
     "Тема 6. Компьютерная графика": "Тема 6. Компьютерная графика. Задание: Напиши конспект Лекции в тетрадь, выполни все задания лекции. Тетрадь с Лекцией и выполненными заданиями сдай учителю. И не забудь про ДЗ! Ссылка на материалы: https://disk.yandex.ru/d/qKQ3ZFQHg59wGQ",
 }
 
@@ -121,12 +123,9 @@ async def show_stats(event: MessageCreated):
     total = len(unique_users)
     await event.message.answer(f"📊 Статистика:\nВсего уникальных пользователей: {total}")
 
-# === НОВОЕ ===
 # ---------- КОМАНДА /reply (только для админа) ----------
-# Использование: /reply <user_id> <текст ответа>
 @dp.message_created(Command('reply'))
 async def cmd_reply(event: MessageCreated):
-    # Только админ может отвечать
     if event.from_user.user_id != ADMIN_ID:
         return
 
@@ -156,7 +155,7 @@ async def cmd_reply(event: MessageCreated):
     except Exception as e:
         await event.message.answer(f"❌ Не удалось отправить ответ: {e}")
 
-# ---------- Обработка всех текстовых сообщений (кнопки, темы и т.д.) ----------
+# ---------- Обработка всех текстовых сообщений ----------
 @dp.message_created(F.message.body.text)
 async def handle_all_text(event: MessageCreated):
     await track_user(event.from_user.user_id)
@@ -164,12 +163,10 @@ async def handle_all_text(event: MessageCreated):
     text = event.message.body.text
     user_id = event.from_user.user_id
 
-    # === НОВОЕ ===
     # Если пользователь сейчас пишет вопрос учителю — перехватываем сообщение
     if user_waiting_question.get(user_id):
-        user_waiting_question[user_id] = False  # выключаем режим
+        user_waiting_question[user_id] = False
 
-        # Пересылаем вопрос админу
         try:
             await bot.send_message(
                 user_id=ADMIN_ID,
@@ -179,7 +176,6 @@ async def handle_all_text(event: MessageCreated):
                     f"Чтобы ответить, отправь:\n/reply {user_id} <твой ответ>"
                 )
             )
-            # Подтверждаем пользователю
             await bot.send_message(
                 user_id=user_id,
                 text="✅ Твой вопрос отправлен учителю. Ответ придёт сюда же."
@@ -190,9 +186,19 @@ async def handle_all_text(event: MessageCreated):
                 user_id=user_id,
                 text="⚠️ Не удалось отправить вопрос. Попробуй позже."
             )
-        return  # ВАЖНО: выходим, чтобы не обрабатывать текст как кнопку
+        return
 
-    # Обработка выбора темы лекции (6 тем)
+    # === НОВОЕ ===
+    # Если пользователь в режиме сдачи ДЗ, а прислал текст, а не файл
+    if user_waiting_homework.get(user_id):
+        # Режим не выключаем — ждём именно файл
+        await bot.send_message(
+            user_id=user_id,
+            text="📎 Пожалуйста, отправь именно файл (документ или фото), а не текст."
+        )
+        return
+
+    # Обработка выбора темы лекции
     if text.startswith("Тема "):
         message = TOPICS_MESSAGES.get(text, "Информация по этой теме временно отсутствует")
         await bot.send_message(user_id=user_id, text=message)
@@ -212,7 +218,6 @@ async def handle_all_text(event: MessageCreated):
             text="Выбери лекцию, которую ты пропустил:",
             attachments=[get_topics_keyboard()]
         )
-    # === НОВОЕ ===
     # Кнопка "Задать вопрос учителю"
     elif text == "✉️ Задать вопрос учителю":
         user_waiting_question[user_id] = True
@@ -220,17 +225,72 @@ async def handle_all_text(event: MessageCreated):
             user_id=user_id,
             text="✍️ Напиши свой вопрос одним сообщением, и я передам его учителю."
         )
-    # Кнопки "Сдать ДЗ" и "Какой у меня вариант?"
-    elif text in ("Сдать ДЗ", "Какой у меня вариант?"):
-        if text == "Сдать ДЗ":
-            response = "Загрузи задание в раздел 'Домашнее задание' в личном кабинете."
-        else:
-            variant_number = random.randint(1, 10)
-            response = f"Ваш вариант: {variant_number}"
-        await bot.send_message(user_id=user_id, text=response)
+    # === НОВОЕ ===
+    # Кнопка "Сдать ДЗ" — включаем режим ожидания файла
+    elif text == "Сдать ДЗ":
+        user_waiting_homework[user_id] = True
+        await bot.send_message(
+            user_id=user_id,
+            text=(
+                "📎 Отправь свой файл (документ или фото), и я передам его учителю.\n"
+                "Если передумал — напиши «отмена»."
+            )
+        )
+    # Отмена сдачи ДЗ
+    elif text.lower() == "отмена" and user_waiting_homework.get(user_id):
+        user_waiting_homework[user_id] = False
+        await bot.send_message(user_id=user_id, text="❌ Сдача ДЗ отменена.")
+    # Кнопка "Какой у меня вариант?"
+    elif text == "Какой у меня вариант?":
+        variant_number = random.randint(1, 10)
+        await bot.send_message(user_id=user_id, text=f"Ваш вариант: {variant_number}")
     # Кнопки "Да"/"Нет" и всё остальное
     else:
         await bot.send_message(user_id=user_id, text=f'Вы выбрали "{text}"')
+
+# === НОВОЕ ===
+# ---------- Обработка сообщений с файлами (сдача ДЗ) ----------
+@dp.message_created(F.message.attachments)
+async def handle_attachments(event: MessageCreated):
+    """
+    Срабатывает, когда пользователь отправляет файл (документ, фото и т.п.).
+    Если он в режиме сдачи ДЗ — пересылаем файл админу.
+    """
+    await track_user(event.from_user.user_id)
+
+    user_id = event.from_user.user_id
+
+    # Проверяем, что пользователь действительно сдаёт ДЗ
+    if not user_waiting_homework.get(user_id):
+        return
+
+    # Выключаем режим сдачи
+    user_waiting_homework[user_id] = False
+
+    try:
+        # Пересылаем сообщение с файлом админу
+        # Используем тот же chat_id, но для админа
+        # В maxapi есть метод forward или просто копирование вложений
+        await bot.send_message(
+            user_id=ADMIN_ID,
+            text=(
+                f"📥 Работа от {event.from_user.first_name} "
+                f"(ID: {user_id}):\n\n"
+                f"Файл во вложении."
+            ),
+            attachments=event.message.attachments  # передаём вложения из исходного сообщения
+        )
+        # Подтверждаем ученику
+        await bot.send_message(
+            user_id=user_id,
+            text="✅ Твоя работа отправлена учителю. Спасибо!"
+        )
+    except Exception as e:
+        logging.error(f"Ошибка при пересылке файла: {e}")
+        await bot.send_message(
+            user_id=user_id,
+            text="⚠️ Не удалось отправить файл. Попробуй позже или напиши учителю."
+        )
 
 # ======================== ЗАПУСК ========================
 async def main():
@@ -239,3 +299,4 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
+    
