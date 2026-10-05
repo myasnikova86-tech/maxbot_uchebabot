@@ -5,9 +5,6 @@ import random
 from maxapi import Bot, Dispatcher, F
 from maxapi.types import MessageButton, MessageCreated, Command, BotStarted
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
-import tempfile
-from pathlib import Path
-from maxapi.types import InputMedia
 
 # ======================== НАСТРОЙКА ========================
 logging.basicConfig(level=logging.INFO)
@@ -36,7 +33,6 @@ except ValueError:
 # Словарь: кто сейчас пишет вопрос учителю
 user_waiting_question = {}
 
-# === НОВОЕ ===
 # Словарь: кто сейчас сдаёт домашнее задание
 user_waiting_homework = {}
 
@@ -49,6 +45,7 @@ def get_info_keyboard():
     kb.row(MessageButton(text='Какой у меня вариант?'))
     kb.row(MessageButton(text='✉️ Задать вопрос учителю'))
     return kb.as_markup()
+
 
 def get_topics_keyboard():
     kb = InlineKeyboardBuilder()
@@ -64,6 +61,7 @@ def get_topics_keyboard():
         kb.row(MessageButton(text=topic))
     return kb.as_markup()
 
+
 TOPICS_MESSAGES = {
     "Тема 1. Системы счисления": "Тема 1. Системы счисления. Задание: Напиши конспект Лекции в тетрадь, выполни все задания лекции. Тетрадь с Лекцией и выполненными заданиями сдай учителю. И не забудь про ДЗ! Ссылка на материалы: https://disk.yandex.ru/d/APQE4mDwBTSbkA",
     "Тема 2. Алгебра логики": "Тема 2. Алгебра логики. Задание: Напиши конспект Лекции в тетрадь, выполни все задания лекции. Тетрадь с Лекцией и выполненными заданиями сдай учителю. И не забудь про ДЗ! Ссылка на материалы: https://disk.yandex.ru/d/BPjzUvFeiSOvVw",
@@ -73,10 +71,12 @@ TOPICS_MESSAGES = {
     "Тема 6. Компьютерная графика": "Тема 6. Компьютерная графика. Задание: Напиши конспект Лекции в тетрадь, выполни все задания лекции. Тетрадь с Лекцией и выполненными заданиями сдай учителю. И не забудь про ДЗ! Ссылка на материалы: https://disk.yandex.ru/d/qKQ3ZFQHg59wGQ",
 }
 
+
 # ======================== ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ========================
 async def track_user(user_id):
     """Добавляет пользователя в множество уникальных"""
     unique_users.add(user_id)
+
 
 # ======================== ОБРАБОТЧИКИ ========================
 @dp.bot_started()
@@ -91,10 +91,12 @@ async def bot_started(event: BotStarted):
         attachments=[kb.as_markup()]
     )
 
+
 @dp.message_created(Command('start'))
 async def start_message(event: MessageCreated):
     await track_user(event.from_user.user_id)
     await event.message.answer("Обработка команды start")
+
 
 @dp.message_created(Command('id'))
 async def cmd_id(event: MessageCreated):
@@ -102,6 +104,7 @@ async def cmd_id(event: MessageCreated):
     user_id = event.from_user.user_id
     name = event.from_user.first_name
     await event.message.answer(f"Привет, {name}!\nТвой ID: {user_id}")
+
 
 @dp.message_created(Command('test'))
 async def test_message(event: MessageCreated):
@@ -114,6 +117,7 @@ async def test_message(event: MessageCreated):
         attachments=[reply_kb.as_markup()]
     )
 
+
 # ---------- КОМАНДА /stats (только для админа) ----------
 @dp.message_created(Command('stats'))
 async def show_stats(event: MessageCreated):
@@ -125,6 +129,7 @@ async def show_stats(event: MessageCreated):
 
     total = len(unique_users)
     await event.message.answer(f"📊 Статистика:\nВсего уникальных пользователей: {total}")
+
 
 # ---------- КОМАНДА /reply (только для админа) ----------
 @dp.message_created(Command('reply'))
@@ -158,12 +163,46 @@ async def cmd_reply(event: MessageCreated):
     except Exception as e:
         await event.message.answer(f"❌ Не удалось отправить ответ: {e}")
 
-# ---------- Обработка всех текстовых сообщений ----------
+
+# ---------- ОБРАБОТКА СООБЩЕНИЙ С ФАЙЛАМИ (СДАЧА ДЗ) ----------
+@dp.message_created(F.message.body.attachments != [])
+async def handle_homework_files(event: MessageCreated):
+    """Срабатывает, когда приходит сообщение с вложением."""
+    await track_user(event.from_user.user_id)
+    user_id = event.from_user.user_id
+
+    # Если пользователь не в режиме сдачи ДЗ — игнорируем
+    if not user_waiting_homework.get(user_id):
+        return
+
+    user_waiting_homework[user_id] = False
+    attachments = event.message.body.attachments
+    text = event.message.body.text or "(без подписи)"
+
+    try:
+        await bot.send_message(
+            user_id=ADMIN_ID,
+            text=(
+                f"📥 Работа от {event.from_user.first_name} "
+                f"(ID: {user_id}):\n\n{text}"
+            ),
+            attachments=attachments
+        )
+        await bot.send_message(
+            user_id=user_id,
+            text="✅ Твоя работа отправлена учителю. Спасибо!"
+        )
+    except Exception as e:
+        logging.error(f"Ошибка при пересылке файла: {e}")
+        await bot.send_message(
+            user_id=user_id,
+            text="⚠️ Не удалось отправить файл. Попробуй позже."
+        )
+
+
+# ---------- ОБРАБОТКА ВСЕХ ТЕКСТОВЫХ СООБЩЕНИЙ ----------
 @dp.message_created(F.message.body.text)
 async def handle_all_text(event: MessageCreated):
-    logging.info(f"▶ body.text={event.message.body.text!r}")
-    logging.info(f"▶ body.attachments={getattr(event.message.body, 'attachments', 'нет атрибута')}")
-    logging.info(f"▶ message.attachments={getattr(event.message, 'attachments', 'нет атрибута')}")
     await track_user(event.from_user.user_id)
 
     text = event.message.body.text
@@ -194,10 +233,8 @@ async def handle_all_text(event: MessageCreated):
             )
         return
 
-    # === НОВОЕ ===
     # Если пользователь в режиме сдачи ДЗ, а прислал текст, а не файл
     if user_waiting_homework.get(user_id):
-        # Режим не выключаем — ждём именно файл
         await bot.send_message(
             user_id=user_id,
             text="📎 Пожалуйста, отправь именно файл (документ или фото), а не текст."
@@ -231,7 +268,6 @@ async def handle_all_text(event: MessageCreated):
             user_id=user_id,
             text="✍️ Напиши свой вопрос одним сообщением, и я передам его учителю."
         )
-    # === НОВОЕ ===
     # Кнопка "Сдать ДЗ" — включаем режим ожидания файла
     elif text == "Сдать ДЗ":
         user_waiting_homework[user_id] = True
@@ -253,18 +289,13 @@ async def handle_all_text(event: MessageCreated):
     # Кнопки "Да"/"Нет" и всё остальное
     else:
         await bot.send_message(user_id=user_id, text=f'Вы выбрали "{text}"')
-# ======================== ОТЛАДКА: ЛОВУШКА ДЛЯ ВСЕХ СООБЩЕНИЙ ========================
-@dp.message_created(F.message.body.attachments != [])
-async def catch_files(event: MessageCreated):
-    logging.info("=" * 60)
-    logging.info("📎 Поймано сообщение с вложением!")
-    logging.info(f"🔍 attachments = {event.message.body.attachments}")
-    logging.info("=" * 60)
+
 
 # ======================== ЗАПУСК ========================
 async def main():
     await bot.delete_webhook()
     await dp.start_polling(bot)
+
 
 if __name__ == '__main__':
     asyncio.run(main())
