@@ -254,16 +254,11 @@ async def handle_all_text(event: MessageCreated):
     else:
         await bot.send_message(user_id=user_id, text=f'Вы выбрали "{text}"')
 # ======================== ОТЛАДКА: ЛОВУШКА ДЛЯ ВСЕХ СООБЩЕНИЙ ========================
-@dp.message_created()
-async def catch_all(event: MessageCreated):
+@dp.message_created(F.message.body.attachments != [])
+async def catch_files(event: MessageCreated):
     logging.info("=" * 60)
-    logging.info("🔍 Поймано событие message_created")
-    logging.info(f"🔍 event = {event}")
-    logging.info(f"🔍 event.message = {event.message}")
-    logging.info(f"🔍 body = {event.message.body}")
-    logging.info(f"🔍 body.__dict__ = {getattr(event.message.body, '__dict__', 'НЕТ')}")
-    logging.info(f"🔍 body.attachments = {getattr(event.message.body, 'attachments', 'НЕТ')}")
-    logging.info(f"🔍 message.attachments = {getattr(event.message, 'attachments', 'НЕТ')}")
+    logging.info("📎 Поймано сообщение с вложением!")
+    logging.info(f"🔍 attachments = {event.message.body.attachments}")
     logging.info("=" * 60)
 
 # ======================== ЗАПУСК ========================
