@@ -5,6 +5,9 @@ import random
 from maxapi import Bot, Dispatcher, F
 from maxapi.types import MessageButton, MessageCreated, Command, BotStarted
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
+import tempfile
+from pathlib import Path
+from maxapi.types import InputMedia
 
 # ======================== НАСТРОЙКА ========================
 logging.basicConfig(level=logging.INFO)
@@ -158,6 +161,9 @@ async def cmd_reply(event: MessageCreated):
 # ---------- Обработка всех текстовых сообщений ----------
 @dp.message_created(F.message.body.text)
 async def handle_all_text(event: MessageCreated):
+    logging.info(f"▶ body.text={event.message.body.text!r}")
+    logging.info(f"▶ body.attachments={getattr(event.message.body, 'attachments', 'нет атрибута')}")
+    logging.info(f"▶ message.attachments={getattr(event.message, 'attachments', 'нет атрибута')}")
     await track_user(event.from_user.user_id)
 
     text = event.message.body.text
@@ -247,50 +253,6 @@ async def handle_all_text(event: MessageCreated):
     # Кнопки "Да"/"Нет" и всё остальное
     else:
         await bot.send_message(user_id=user_id, text=f'Вы выбрали "{text}"')
-
-# === НОВОЕ ===
-# ---------- Обработка сообщений с файлами (сдача ДЗ) ----------
-@dp.message_created(F.message.attachments)
-async def handle_attachments(event: MessageCreated):
-    """
-    Срабатывает, когда пользователь отправляет файл (документ, фото и т.п.).
-    Если он в режиме сдачи ДЗ — пересылаем файл админу.
-    """
-    await track_user(event.from_user.user_id)
-
-    user_id = event.from_user.user_id
-
-    # Проверяем, что пользователь действительно сдаёт ДЗ
-    if not user_waiting_homework.get(user_id):
-        return
-
-    # Выключаем режим сдачи
-    user_waiting_homework[user_id] = False
-
-    try:
-        # Пересылаем сообщение с файлом админу
-        # Используем тот же chat_id, но для админа
-        # В maxapi есть метод forward или просто копирование вложений
-        await bot.send_message(
-            user_id=ADMIN_ID,
-            text=(
-                f"📥 Работа от {event.from_user.first_name} "
-                f"(ID: {user_id}):\n\n"
-                f"Файл во вложении."
-            ),
-            attachments=event.message.attachments  # передаём вложения из исходного сообщения
-        )
-        # Подтверждаем ученику
-        await bot.send_message(
-            user_id=user_id,
-            text="✅ Твоя работа отправлена учителю. Спасибо!"
-        )
-    except Exception as e:
-        logging.error(f"Ошибка при пересылке файла: {e}")
-        await bot.send_message(
-            user_id=user_id,
-            text="⚠️ Не удалось отправить файл. Попробуй позже или напиши учителю."
-        )
 
 # ======================== ЗАПУСК ========================
 async def main():
