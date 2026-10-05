@@ -1,7 +1,9 @@
 import asyncio
+import json
 import logging
 import os
 import random
+from pathlib import Path
 from maxapi import Bot, Dispatcher, F
 from maxapi.types import MessageButton, MessageCreated, Command, BotStarted
 from maxapi.utils.inline_keyboard import InlineKeyboardBuilder
@@ -17,8 +19,40 @@ if not TOKEN:
 bot = Bot(TOKEN)
 dp = Dispatcher()
 
-# Множество для хранения уникальных ID пользователей
+# ======================== ХРАНИЛИЩЕ СТАТИСТИКИ ========================
+# Папка /app/data создаётся Bothost автоматически и НЕ стирается при деплое
+DATA_DIR = Path("/app/data")
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+STATS_FILE = DATA_DIR / "stats.json"
+
+# Множество уникальных пользователей
 unique_users = set()
+
+
+def load_stats():
+    """Загружает статистику из файла при запуске бота."""
+    global unique_users
+    try:
+        with open(STATS_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            unique_users = set(data.get('users', []))
+            logging.info(f"📊 Загружено {len(unique_users)} пользователей из файла.")
+    except FileNotFoundError:
+        unique_users = set()
+        logging.info("📊 Файл статистики не найден, начинаем с нуля.")
+    except Exception as e:
+        logging.error(f"Ошибка загрузки статистики: {e}")
+        unique_users = set()
+
+
+def save_stats():
+    """Сохраняет статистику в файл."""
+    try:
+        with open(STATS_FILE, 'w', encoding='utf-8') as f:
+            json.dump({'users': list(unique_users)}, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logging.error(f"Ошибка сохранения статистики: {e}")
+
 
 ADMIN_ID = os.environ.get('ADMIN_ID')
 if not ADMIN_ID:
@@ -74,8 +108,11 @@ TOPICS_MESSAGES = {
 
 # ======================== ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ========================
 async def track_user(user_id):
-    """Добавляет пользователя в множество уникальных"""
-    unique_users.add(user_id)
+    """Добавляет пользователя в множество уникальных и сохраняет в файл."""
+    if user_id not in unique_users:
+        unique_users.add(user_id)
+        save_stats()  # сохраняем только при появлении нового пользователя
+        logging.info(f"👤 Новый пользователь: {user_id}. Всего: {len(unique_users)}")
 
 
 # ======================== ОБРАБОТЧИКИ ========================
@@ -293,6 +330,7 @@ async def handle_all_text(event: MessageCreated):
 
 # ======================== ЗАПУСК ========================
 async def main():
+    load_stats()  # ← загружаем статистику из /app/data/stats.json
     await bot.delete_webhook()
     await dp.start_polling(bot)
 
